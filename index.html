@@ -564,21 +564,22 @@
       document.getElementById('practiceButton').disabled = true;
 
       const currentWord = vocabularyWords[currentIndex];
-      const existingRecord = userRecords.find(r => r.word_id === currentWord.id);
-
-      if (!existingRecord) {
-        const result = await window.dataSdk.create({
-          word_id: currentWord.id,
-          needs_practice: false,
-          marked_at: new Date().toISOString()
-        });
-
-        if (!result.isOk) {
-          console.error('Failed to save progress');
+      
+      // Move to next card immediately
+      currentIndex++;
+      
+      // Save progress in background if SDK available
+      if (window.dataSdk) {
+        const existingRecord = userRecords.find(r => r.word_id === currentWord.id);
+        if (!existingRecord) {
+          window.dataSdk.create({
+            word_id: currentWord.id,
+            needs_practice: false,
+            marked_at: new Date().toISOString()
+          }).catch(err => console.error('Failed to save progress'));
         }
       }
 
-      currentIndex++;
       isProcessing = false;
       document.getElementById('knowButton').disabled = false;
       document.getElementById('practiceButton').disabled = false;
@@ -593,30 +594,28 @@
       document.getElementById('practiceButton').disabled = true;
 
       const currentWord = vocabularyWords[currentIndex];
-      const existingRecord = userRecords.find(r => r.word_id === currentWord.id);
-
-      if (existingRecord) {
-        if (!existingRecord.needs_practice) {
-          existingRecord.needs_practice = true;
-          existingRecord.marked_at = new Date().toISOString();
-          const result = await window.dataSdk.update(existingRecord);
-          if (!result.isOk) {
-            console.error('Failed to update progress');
+      
+      // Move to next card immediately
+      currentIndex++;
+      
+      // Save progress in background if SDK available
+      if (window.dataSdk) {
+        const existingRecord = userRecords.find(r => r.word_id === currentWord.id);
+        if (existingRecord) {
+          if (!existingRecord.needs_practice) {
+            existingRecord.needs_practice = true;
+            existingRecord.marked_at = new Date().toISOString();
+            window.dataSdk.update(existingRecord).catch(err => console.error('Failed to update progress'));
           }
-        }
-      } else {
-        const result = await window.dataSdk.create({
-          word_id: currentWord.id,
-          needs_practice: true,
-          marked_at: new Date().toISOString()
-        });
-
-        if (!result.isOk) {
-          console.error('Failed to save progress');
+        } else {
+          window.dataSdk.create({
+            word_id: currentWord.id,
+            needs_practice: true,
+            marked_at: new Date().toISOString()
+          }).catch(err => console.error('Failed to save progress'));
         }
       }
 
-      currentIndex++;
       isProcessing = false;
       document.getElementById('knowButton').disabled = false;
       document.getElementById('practiceButton').disabled = false;
@@ -793,5 +792,5 @@
 
     initApp();
   </script>
- <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9a8bd08ac17a70e9',t:'MTc2NDg1NjY2NC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9a8d0f8682a55bcc',t:'MTc2NDg2OTczMC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
