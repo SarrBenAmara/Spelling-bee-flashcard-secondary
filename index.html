@@ -1,0 +1,795 @@
+<!doctype html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spelling Bee Flashcards</title>
+  <script src="/_sdk/data_sdk.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <style>
+    body {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+      height: 100%;
+      width: 100%;
+    }
+
+    html {
+      height: 100%;
+      width: 100%;
+    }
+
+    .app-container {
+      width: 100%;
+      min-height: 100%;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2rem;
+      background-color: #6366f1;
+    }
+
+    .header {
+      text-align: center;
+      width: 100%;
+    }
+
+    .app-title {
+      font-size: 2rem;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+      color: #1e293b;
+    }
+
+    .progress {
+      font-size: 1rem;
+      opacity: 0.7;
+      color: #1e293b;
+    }
+
+    .flashcard-container {
+      perspective: 1000px;
+      width: 100%;
+      max-width: 600px;
+    }
+
+    .flashcard {
+      width: 100%;
+      height: 400px;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.6s;
+      cursor: pointer;
+    }
+
+    .flashcard.flipped {
+      transform: rotateY(180deg);
+    }
+
+    .card-face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      background-color: #ffffff;
+      color: #1e293b;
+    }
+
+    .card-front {
+      transform: rotateY(0deg);
+    }
+
+    .card-back {
+      transform: rotateY(180deg);
+    }
+
+    .card-label {
+      font-size: 0.875rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 1rem;
+      opacity: 0.6;
+    }
+
+    .card-word {
+      font-size: 2.5rem;
+      font-weight: bold;
+      margin-bottom: 1rem;
+    }
+
+    .card-definition {
+      font-size: 1.25rem;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .flip-hint {
+      font-size: 0.875rem;
+      opacity: 0.5;
+      margin-top: 2rem;
+    }
+
+    .button-container {
+      display: flex;
+      gap: 1rem;
+      width: 100%;
+      max-width: 600px;
+    }
+
+    .action-button {
+      flex: 1;
+      padding: 1rem 2rem;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      opacity: 1;
+      color: #ffffff;
+    }
+
+    #knowButton {
+      background-color: #10b981;
+    }
+
+    #practiceButton {
+      background-color: #f43f5e;
+    }
+
+    .action-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .action-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .results-container {
+      width: 100%;
+      max-width: 600px;
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      background-color: #ffffff;
+      color: #1e293b;
+    }
+
+    .results-title {
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin-bottom: 1rem;
+    }
+
+    .results-summary {
+      font-size: 1rem;
+      margin-bottom: 1.5rem;
+      opacity: 0.8;
+    }
+
+    .word-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .word-item {
+      padding: 0.75rem 1rem;
+      margin-bottom: 0.5rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      background-color: #ffffff;
+      color: #1e293b;
+    }
+
+    .restart-button {
+      width: 100%;
+      padding: 1rem;
+      margin-top: 1.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background-color: #10b981;
+      color: #ffffff;
+    }
+
+    .restart-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .loading {
+      text-align: center;
+      font-size: 1.25rem;
+      opacity: 0.7;
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+ </head>
+ <body>
+  <div class="app-container">
+   <div class="header"><img src="https://i.imgur.com/qO7jync.png" alt="Spelling Bee Logo" width="100" height="100" style="margin-bottom: 1rem; object-fit: contain;" onerror="this.style.display='none';">
+    <div class="app-title" id="appTitle">
+     Spelling Bee Flashcards
+    </div>
+    <div class="progress" id="progress">
+     Loading...
+    </div>
+   </div>
+   <div id="groupSelection" style="display: none; width: 100%; max-width: 600px;">
+    <div style="background: white; border-radius: 16px; padding: 2rem; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1); display: flex; gap: 2rem; align-items: flex-start;">
+     <div style="flex: 1;">
+      <h2 style="margin: 0 0 1.5rem 0; text-align: center; font-size: 1.5rem; color: #1e293b;">Choose a Word Group</h2>
+      <div id="groupButtons" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;"></div>
+     </div><img src="https://i.imgur.com/FRcJT4K.png" alt="Bee Illustration" style="width: 400px; height: auto; object-fit: contain; flex-shrink: 0;" onerror="this.style.display='none';">
+    </div>
+   </div><button id="homeButton" style="display: none; position: fixed; top: 2rem; right: 2rem; padding: 0.75rem 1.5rem; font-size: 0.875rem; font-weight: 600; border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s; background-color: rgba(255, 255, 255, 0.9); color: #6366f1; z-index: 1000; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">← Back to Groups</button>
+   <div id="flashcardView" style="display: none; width: 100%; max-width: 600px;">
+    <div class="flashcard-container">
+     <div class="flashcard" id="flashcard">
+      <div class="card-face card-front" id="cardFront">
+       <div class="card-label">
+        WORD
+       </div>
+       <div class="card-word" id="wordText"></div>
+       <div class="flip-hint">
+        Click to see definition
+       </div><img src="https://i.imgur.com/qO7jync.png" alt="Logo" width="60" height="60" style="position: absolute; bottom: 1rem; right: 1rem; object-fit: contain;" onerror="this.style.display='none';">
+      </div>
+      <div class="card-face card-back" id="cardBack">
+       <div class="card-label">
+        DEFINITION
+       </div>
+       <div class="card-definition" id="definitionText"></div>
+       <div class="flip-hint">
+        Click to see word
+       </div><img src="https://i.imgur.com/qO7jync.png" alt="Logo" width="60" height="60" style="position: absolute; bottom: 1rem; right: 1rem; object-fit: contain;" onerror="this.style.display='none';">
+      </div>
+     </div>
+    </div>
+    <div class="button-container" style="margin-top: 1.5rem;"><button class="action-button" id="knowButton">I know this</button> <button class="action-button" id="practiceButton">I need to practice</button>
+    </div>
+   </div>
+   <div id="resultsView" style="display: none; width: 100%; max-width: 600px;">
+    <div class="results-container" id="resultsContainer">
+     <div class="results-title">
+      Session Complete! 🎉
+     </div>
+     <div class="results-summary" id="resultsSummary"></div>
+     <div id="practiceListContainer" style="display: none;">
+      <h3 style="margin: 0 0 1rem 0; font-size: 1.125rem;">Words to Practice:</h3>
+      <ul class="word-list" id="practiceList"></ul>
+     </div><button class="restart-button" id="restartButton">Choose Another Group</button>
+    </div>
+   </div>
+  </div>
+  <script>
+    const defaultConfig = {
+      background_color: "#6366f1",
+      card_color: "#ffffff",
+      text_color: "#1e293b",
+      know_button_color: "#10b981",
+      practice_button_color: "#f43f5e",
+      results_bg_color: "#ffffff",
+      font_family: "system-ui, -apple-system, sans-serif",
+      font_size: 16,
+      app_title: "Spelling Bee Flashcards",
+      know_button_text: "I know this",
+      practice_button_text: "I need to practice"
+    };
+
+    const wordGroups = {
+      "Group 1": [
+        { id: "1", word: "Abdicate", definition: "To give up power or responsibility" },
+        { id: "2", word: "Aberration", definition: "Something unusual or unexpected" },
+        { id: "3", word: "Abstain", definition: "To choose not to do something" },
+        { id: "4", word: "Acquiesce", definition: "To agree quietly or reluctantly" },
+        { id: "5", word: "Adversity", definition: "Difficulty or hardship" },
+        { id: "6", word: "Aesthetic", definition: "Related to beauty" },
+        { id: "7", word: "Alleviate", definition: "To reduce pain or difficulty" },
+        { id: "8", word: "Ambivalent", definition: "Having mixed feelings" },
+        { id: "9", word: "Anomaly", definition: "Something that doesn't fit the pattern" },
+        { id: "10", word: "Antagonize", definition: "To provoke or make someone angry" },
+        { id: "11", word: "Apathy", definition: "Lack of interest or feeling" },
+        { id: "12", word: "Arbitrary", definition: "Based on random choice, not reason" },
+        { id: "13", word: "Articulate", definition: "Able to express clearly" },
+        { id: "14", word: "Ascertain", definition: "To find out for sure" },
+        { id: "15", word: "Aspiration", definition: "A strong desire to achieve something" },
+        { id: "16", word: "Audacious", definition: "Bold, daring" },
+        { id: "17", word: "Authenticity", definition: "The quality of being real or true" },
+        { id: "18", word: "Belligerent", definition: "Aggressive or hostile" },
+        { id: "19", word: "Benign", definition: "Harmless" },
+        { id: "20", word: "Boisterous", definition: "Noisy and energetic" },
+        { id: "21", word: "Candor", definition: "Honesty, truthfulness" },
+        { id: "22", word: "Catalyst", definition: "Something that causes change" },
+        { id: "23", word: "Censure", definition: "Strong criticism" },
+        { id: "24", word: "Circumvent", definition: "To go around or avoid" },
+        { id: "25", word: "Coherent", definition: "Logical and clear" },
+        { id: "26", word: "Conducive", definition: "Making something more likely to happen" },
+        { id: "27", word: "Connoisseur", definition: "An expert in a particular area" },
+        { id: "28", word: "Conspicuous", definition: "Easily seen or noticed" },
+        { id: "29", word: "Contemplate", definition: "To think deeply" },
+        { id: "30", word: "Credible", definition: "Believable" }
+      ],
+      "Group 2": [
+        { id: "31", word: "Cumulative", definition: "Increasing by adding little by little" },
+        { id: "32", word: "Debilitate", definition: "To weaken" },
+        { id: "33", word: "Decree", definition: "An official order" },
+        { id: "34", word: "Deference", definition: "Respectful submission" },
+        { id: "35", word: "Delineate", definition: "To describe or outline clearly" },
+        { id: "36", word: "Denounce", definition: "To publicly criticize" },
+        { id: "37", word: "Derivative", definition: "Not original; taken from something else" },
+        { id: "38", word: "Detrimental", definition: "Harmful" },
+        { id: "39", word: "Devious", definition: "Dishonest or tricky" },
+        { id: "40", word: "Digress", definition: "To go off topic" },
+        { id: "41", word: "Diligent", definition: "Hard-working and careful" },
+        { id: "42", word: "Discern", definition: "To recognize or identify" },
+        { id: "43", word: "Discord", definition: "Conflict or disagreement" },
+        { id: "44", word: "Discretion", definition: "Careful judgment" },
+        { id: "45", word: "Disparage", definition: "To speak disrespectfully about something" },
+        { id: "46", word: "Disposition", definition: "A person's mood or character" },
+        { id: "47", word: "Dormant", definition: "Inactive, sleeping (temporarily)" },
+        { id: "48", word: "Eccentric", definition: "Strange or unusual in behavior" },
+        { id: "49", word: "Eloquent", definition: "Fluent and persuasive in speaking" },
+        { id: "50", word: "Emphatic", definition: "Expressing something with emphasis" },
+        { id: "51", word: "Endeavor", definition: "An effort or attempt" },
+        { id: "52", word: "Entail", definition: "To involve something as a necessary part" },
+        { id: "53", word: "Epiphany", definition: "A sudden realization" },
+        { id: "54", word: "Equitable", definition: "Fair and equal" },
+        { id: "55", word: "Feasible", definition: "Possible, practical" },
+        { id: "56", word: "Fluctuate", definition: "To change or vary continuously" },
+        { id: "57", word: "Formidable", definition: "Inspiring fear or respect" },
+        { id: "58", word: "Frivolous", definition: "Not serious or important" },
+        { id: "59", word: "Fundamental", definition: "Basic, essential" },
+        { id: "60", word: "Futile", definition: "Useless, producing no result" }
+      ],
+      "Group 3": [
+        { id: "61", word: "Gratuitous", definition: "Unnecessary or uncalled for" },
+        { id: "62", word: "Gregarious", definition: "Sociable" },
+        { id: "63", word: "Heinous", definition: "Shockingly evil" },
+        { id: "64", word: "Hypocrisy", definition: "Pretending to have beliefs you don't" },
+        { id: "65", word: "Idiosyncrasy", definition: "A strange habit" },
+        { id: "66", word: "Illicit", definition: "Illegal or forbidden" },
+        { id: "67", word: "Imperative", definition: "Absolutely necessary" },
+        { id: "68", word: "Implicit", definition: "Suggested but not stated" },
+        { id: "69", word: "Inadvertent", definition: "Unintentional" },
+        { id: "70", word: "Incessant", definition: "Continuing without stopping" },
+        { id: "71", word: "Incite", definition: "To encourage violent or harmful behavior" },
+        { id: "72", word: "Incompetent", definition: "Not capable" },
+        { id: "73", word: "Incredible", definition: "Hard to believe" },
+        { id: "74", word: "Inevitable", definition: "Certain to happen" },
+        { id: "75", word: "Inferior", definition: "Lower in quality" },
+        { id: "76", word: "Ingenious", definition: "Very clever" },
+        { id: "77", word: "Innate", definition: "Natural, inborn" },
+        { id: "78", word: "Insightful", definition: "Showing deep understanding" },
+        { id: "79", word: "Instigate", definition: "To provoke or start" },
+        { id: "80", word: "Integral", definition: "Essential, necessary" },
+        { id: "81", word: "Intermittent", definition: "Occurring at irregular intervals" },
+        { id: "82", word: "Intrepid", definition: "Fearless" },
+        { id: "83", word: "Judicious", definition: "Showing good judgment" },
+        { id: "84", word: "Lament", definition: "To express sorrow" },
+        { id: "85", word: "Lucrative", definition: "Profitable" },
+        { id: "86", word: "Magnanimous", definition: "Generous, forgiving" },
+        { id: "87", word: "Meticulous", definition: "Very careful about details" },
+        { id: "88", word: "Morose", definition: "Gloomy, sad" },
+        { id: "89", word: "Mundane", definition: "Ordinary, boring" },
+        { id: "90", word: "Negligent", definition: "Careless" }
+      ],
+      "Group 4": [
+        { id: "91", word: "Notorious", definition: "Well-known for something bad" },
+        { id: "92", word: "Oblivious", definition: "Unaware" },
+        { id: "93", word: "Obsolete", definition: "No longer useful" },
+        { id: "94", word: "Omnipotent", definition: "All-powerful" },
+        { id: "95", word: "Onus", definition: "A responsibility or burden" },
+        { id: "96", word: "Optimistic", definition: "Expecting good things" },
+        { id: "97", word: "Ornate", definition: "Highly decorated" },
+        { id: "98", word: "Ostracize", definition: "Exclude from a group" },
+        { id: "99", word: "Paradox", definition: "A statement that seems impossible but is true" },
+        { id: "100", word: "Perpetual", definition: "Never ending" },
+        { id: "101", word: "Pertinent", definition: "Relevant" },
+        { id: "102", word: "Plausible", definition: "Believable" },
+        { id: "103", word: "Precocious", definition: "Advanced for one's age" },
+        { id: "104", word: "Proclaim", definition: "To announce publicly" },
+        { id: "105", word: "Procrastinate", definition: "To delay doing something" },
+        { id: "106", word: "Profound", definition: "Deep, meaningful" },
+        { id: "107", word: "Prohibit", definition: "To forbid" },
+        { id: "108", word: "Propel", definition: "To push forward" },
+        { id: "109", word: "Quaint", definition: "Charmingly old-fashioned" },
+        { id: "110", word: "Rational", definition: "Logical and reasonable" },
+        { id: "111", word: "Reconcile", definition: "To make peace" },
+        { id: "112", word: "Redundant", definition: "No longer needed" },
+        { id: "113", word: "Refute", definition: "To prove wrong" },
+        { id: "114", word: "Relinquish", definition: "To give up" },
+        { id: "115", word: "Reluctant", definition: "Unwilling" },
+        { id: "116", word: "Resilient", definition: "Able to recover quickly" },
+        { id: "117", word: "Scrutinize", definition: "Examine very closely" },
+        { id: "118", word: "Simultaneous", definition: "Happening at the same time" },
+        { id: "119", word: "Substantiate", definition: "To provide evidence" },
+        { id: "120", word: "Vindicate", definition: "To prove someone right or free them from blame" }
+      ]
+    };
+
+    let vocabularyWords = [];
+    let selectedGroup = null;
+
+    let currentIndex = 0;
+    let userRecords = [];
+    let isFlipped = false;
+    let isProcessing = false;
+
+    const dataHandler = {
+      onDataChanged(data) {
+        userRecords = data;
+      }
+    };
+
+    async function initApp() {
+      const initResult = await window.dataSdk.init(dataHandler);
+      if (!initResult.isOk) {
+        document.getElementById('progress').textContent = 'Error loading app';
+        return;
+      }
+
+      showGroupSelection();
+    }
+
+    function showGroupSelection() {
+      document.getElementById('groupSelection').style.display = 'flex';
+      document.getElementById('flashcardView').style.display = 'none';
+      document.getElementById('resultsView').style.display = 'none';
+      document.getElementById('homeButton').style.display = 'none';
+      document.getElementById('progress').textContent = 'Select a group to start';
+
+      const groupButtons = document.getElementById('groupButtons');
+      groupButtons.innerHTML = '';
+
+      Object.keys(wordGroups).forEach(groupName => {
+        const button = document.createElement('button');
+        button.textContent = `${groupName} (${wordGroups[groupName].length} words)`;
+        button.style.padding = '1rem';
+        button.style.fontSize = '1rem';
+        button.style.fontWeight = '600';
+        button.style.border = 'none';
+        button.style.borderRadius = '12px';
+        button.style.cursor = 'pointer';
+        button.style.transition = 'all 0.2s';
+        button.style.backgroundColor = '#6366f1';
+        button.style.color = '#ffffff';
+
+        button.addEventListener('mouseover', () => {
+          button.style.transform = 'translateY(-2px)';
+          button.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+        });
+
+        button.addEventListener('mouseout', () => {
+          button.style.transform = 'translateY(0)';
+          button.style.boxShadow = 'none';
+        });
+
+        button.addEventListener('click', () => {
+          selectedGroup = groupName;
+          vocabularyWords = wordGroups[groupName];
+          currentIndex = 0;
+          displayCurrentCard();
+        });
+
+        groupButtons.appendChild(button);
+      });
+    }
+
+    function displayCurrentCard() {
+      if (currentIndex >= vocabularyWords.length) {
+        showResults();
+        return;
+      }
+
+      const currentWord = vocabularyWords[currentIndex];
+      document.getElementById('wordText').textContent = currentWord.word;
+      document.getElementById('definitionText').textContent = currentWord.definition;
+      document.getElementById('progress').textContent = `${selectedGroup} - Card ${currentIndex + 1} of ${vocabularyWords.length}`;
+      
+      document.getElementById('groupSelection').style.display = 'none';
+      document.getElementById('flashcardView').style.display = 'block';
+      document.getElementById('resultsView').style.display = 'none';
+      document.getElementById('homeButton').style.display = 'block';
+      
+      isFlipped = false;
+      document.getElementById('flashcard').classList.remove('flipped');
+    }
+
+    function showResults() {
+      const practiceWords = userRecords
+        .filter(record => record.needs_practice)
+        .map(record => {
+          const word = vocabularyWords.find(w => w.id === record.word_id);
+          return word ? word.word : null;
+        })
+        .filter(word => word !== null);
+
+      const knownCount = vocabularyWords.length - practiceWords.length;
+      
+      document.getElementById('resultsSummary').textContent = 
+        `${selectedGroup}: You know ${knownCount} out of ${vocabularyWords.length} words!`;
+
+      if (practiceWords.length > 0) {
+        document.getElementById('practiceListContainer').style.display = 'block';
+        const practiceList = document.getElementById('practiceList');
+        practiceList.innerHTML = '';
+        
+        practiceWords.forEach(word => {
+          const li = document.createElement('li');
+          li.className = 'word-item';
+          li.textContent = word;
+          practiceList.appendChild(li);
+        });
+      } else {
+        document.getElementById('practiceListContainer').style.display = 'none';
+      }
+
+      document.getElementById('groupSelection').style.display = 'none';
+      document.getElementById('flashcardView').style.display = 'none';
+      document.getElementById('resultsView').style.display = 'block';
+      document.getElementById('homeButton').style.display = 'block';
+    }
+
+    document.getElementById('flashcard').addEventListener('click', () => {
+      isFlipped = !isFlipped;
+      document.getElementById('flashcard').classList.toggle('flipped');
+    });
+
+    document.getElementById('knowButton').addEventListener('click', async () => {
+      if (isProcessing) return;
+      isProcessing = true;
+      
+      document.getElementById('knowButton').disabled = true;
+      document.getElementById('practiceButton').disabled = true;
+
+      const currentWord = vocabularyWords[currentIndex];
+      const existingRecord = userRecords.find(r => r.word_id === currentWord.id);
+
+      if (!existingRecord) {
+        const result = await window.dataSdk.create({
+          word_id: currentWord.id,
+          needs_practice: false,
+          marked_at: new Date().toISOString()
+        });
+
+        if (!result.isOk) {
+          console.error('Failed to save progress');
+        }
+      }
+
+      currentIndex++;
+      isProcessing = false;
+      document.getElementById('knowButton').disabled = false;
+      document.getElementById('practiceButton').disabled = false;
+      displayCurrentCard();
+    });
+
+    document.getElementById('practiceButton').addEventListener('click', async () => {
+      if (isProcessing) return;
+      isProcessing = true;
+      
+      document.getElementById('knowButton').disabled = true;
+      document.getElementById('practiceButton').disabled = true;
+
+      const currentWord = vocabularyWords[currentIndex];
+      const existingRecord = userRecords.find(r => r.word_id === currentWord.id);
+
+      if (existingRecord) {
+        if (!existingRecord.needs_practice) {
+          existingRecord.needs_practice = true;
+          existingRecord.marked_at = new Date().toISOString();
+          const result = await window.dataSdk.update(existingRecord);
+          if (!result.isOk) {
+            console.error('Failed to update progress');
+          }
+        }
+      } else {
+        const result = await window.dataSdk.create({
+          word_id: currentWord.id,
+          needs_practice: true,
+          marked_at: new Date().toISOString()
+        });
+
+        if (!result.isOk) {
+          console.error('Failed to save progress');
+        }
+      }
+
+      currentIndex++;
+      isProcessing = false;
+      document.getElementById('knowButton').disabled = false;
+      document.getElementById('practiceButton').disabled = false;
+      displayCurrentCard();
+    });
+
+    document.getElementById('restartButton').addEventListener('click', () => {
+      showGroupSelection();
+    });
+
+    document.getElementById('homeButton').addEventListener('click', () => {
+      showGroupSelection();
+    });
+
+    async function onConfigChange(config) {
+      const appContainer = document.querySelector('.app-container');
+      const cardFront = document.getElementById('cardFront');
+      const cardBack = document.getElementById('cardBack');
+      const knowButton = document.getElementById('knowButton');
+      const practiceButton = document.getElementById('practiceButton');
+      const resultsContainer = document.getElementById('resultsContainer');
+      const wordItems = document.querySelectorAll('.word-item');
+      const restartButton = document.getElementById('restartButton');
+
+      const customFont = config.font_family || defaultConfig.font_family;
+      const baseFontStack = 'system-ui, -apple-system, sans-serif';
+      const fontFamily = `${customFont}, ${baseFontStack}`;
+      const baseSize = config.font_size || defaultConfig.font_size;
+
+      const backgroundColor = config.background_color || defaultConfig.background_color;
+      const cardColor = config.card_color || defaultConfig.card_color;
+      const textColor = config.text_color || defaultConfig.text_color;
+      const knowButtonColor = config.know_button_color || defaultConfig.know_button_color;
+      const practiceButtonColor = config.practice_button_color || defaultConfig.practice_button_color;
+      const resultsBgColor = config.results_bg_color || defaultConfig.results_bg_color;
+
+      appContainer.style.backgroundColor = backgroundColor;
+      appContainer.style.fontFamily = fontFamily;
+
+      document.getElementById('appTitle').textContent = config.app_title || defaultConfig.app_title;
+      document.getElementById('appTitle').style.color = textColor;
+      document.getElementById('appTitle').style.fontSize = `${baseSize * 2}px`;
+      document.getElementById('appTitle').style.fontFamily = fontFamily;
+
+      document.getElementById('progress').style.color = textColor;
+      document.getElementById('progress').style.fontSize = `${baseSize}px`;
+      document.getElementById('progress').style.fontFamily = fontFamily;
+
+      cardFront.style.backgroundColor = cardColor;
+      cardFront.style.color = textColor;
+      cardBack.style.backgroundColor = cardColor;
+      cardBack.style.color = textColor;
+
+      const cardLabels = document.querySelectorAll('.card-label');
+      cardLabels.forEach(label => {
+        label.style.fontSize = `${baseSize * 0.875}px`;
+        label.style.fontFamily = fontFamily;
+      });
+
+      document.getElementById('wordText').style.fontSize = `${baseSize * 2.5}px`;
+      document.getElementById('wordText').style.fontFamily = fontFamily;
+      document.getElementById('definitionText').style.fontSize = `${baseSize * 1.25}px`;
+      document.getElementById('definitionText').style.fontFamily = fontFamily;
+
+      document.querySelectorAll('.flip-hint').forEach(hint => {
+        hint.style.fontSize = `${baseSize * 0.875}px`;
+        hint.style.fontFamily = fontFamily;
+      });
+
+      knowButton.textContent = config.know_button_text || defaultConfig.know_button_text;
+      knowButton.style.backgroundColor = knowButtonColor;
+      knowButton.style.color = '#ffffff';
+      knowButton.style.fontSize = `${baseSize}px`;
+      knowButton.style.fontFamily = fontFamily;
+
+      practiceButton.textContent = config.practice_button_text || defaultConfig.practice_button_text;
+      practiceButton.style.backgroundColor = practiceButtonColor;
+      practiceButton.style.color = '#ffffff';
+      practiceButton.style.fontSize = `${baseSize}px`;
+      practiceButton.style.fontFamily = fontFamily;
+
+      resultsContainer.style.backgroundColor = resultsBgColor;
+      resultsContainer.style.color = textColor;
+
+      document.querySelector('.results-title').style.fontSize = `${baseSize * 1.5}px`;
+      document.querySelector('.results-title').style.fontFamily = fontFamily;
+      document.getElementById('resultsSummary').style.fontSize = `${baseSize}px`;
+      document.getElementById('resultsSummary').style.fontFamily = fontFamily;
+
+      const practiceListTitle = document.querySelector('#practiceListContainer h3');
+      if (practiceListTitle) {
+        practiceListTitle.style.fontSize = `${baseSize * 1.125}px`;
+        practiceListTitle.style.fontFamily = fontFamily;
+      }
+
+      wordItems.forEach(item => {
+        item.style.backgroundColor = cardColor;
+        item.style.color = textColor;
+        item.style.fontSize = `${baseSize}px`;
+        item.style.fontFamily = fontFamily;
+      });
+
+      restartButton.style.backgroundColor = knowButtonColor;
+      restartButton.style.color = '#ffffff';
+      restartButton.style.fontSize = `${baseSize}px`;
+      restartButton.style.fontFamily = fontFamily;
+    }
+
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange,
+        mapToCapabilities: (config) => ({
+          recolorables: [
+            {
+              get: () => config.background_color || defaultConfig.background_color,
+              set: (value) => {
+                config.background_color = value;
+                window.elementSdk.setConfig({ background_color: value });
+              }
+            },
+            {
+              get: () => config.card_color || defaultConfig.card_color,
+              set: (value) => {
+                config.card_color = value;
+                window.elementSdk.setConfig({ card_color: value });
+              }
+            },
+            {
+              get: () => config.text_color || defaultConfig.text_color,
+              set: (value) => {
+                config.text_color = value;
+                window.elementSdk.setConfig({ text_color: value });
+              }
+            },
+            {
+              get: () => config.know_button_color || defaultConfig.know_button_color,
+              set: (value) => {
+                config.know_button_color = value;
+                window.elementSdk.setConfig({ know_button_color: value });
+              }
+            },
+            {
+              get: () => config.practice_button_color || defaultConfig.practice_button_color,
+              set: (value) => {
+                config.practice_button_color = value;
+                window.elementSdk.setConfig({ practice_button_color: value });
+              }
+            }
+          ],
+          borderables: [],
+          fontEditable: {
+            get: () => config.font_family || defaultConfig.font_family,
+            set: (value) => {
+              config.font_family = value;
+              window.elementSdk.setConfig({ font_family: value });
+            }
+          },
+          fontSizeable: {
+            get: () => config.font_size || defaultConfig.font_size,
+            set: (value) => {
+              config.font_size = value;
+              window.elementSdk.setConfig({ font_size: value });
+            }
+          }
+        }),
+        mapToEditPanelValues: (config) => new Map([
+          ["app_title", config.app_title || defaultConfig.app_title],
+          ["know_button_text", config.know_button_text || defaultConfig.know_button_text],
+          ["practice_button_text", config.practice_button_text || defaultConfig.practice_button_text]
+        ])
+      });
+    }
+
+    initApp();
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9a8bc8f100b16488',t:'MTc2NDg1NjM1My4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
